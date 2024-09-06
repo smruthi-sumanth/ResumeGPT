@@ -1,83 +1,54 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>AI-Powered Resume Screening Tool</title>
-    <style>
-      .loader {
-        border: 12px solid #f3f3f3;
-        border-radius: 50%;
-        border-top: 12px solid #3498db;
-        width: 30px;
-        height: 30px;
-        animation: spin 2s linear infinite;
-        display: none;
-      }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Upload</title>
+</head>
+<body>
+    <h1>Upload Resumes</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <label for="job_description">Job Description:</label><br>
+        <textarea id="job_description" name="job_description" rows="5" cols="50" required></textarea><br><br>
 
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Upload Resume and Job Description</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-      <p><input type="file" name="file[]" multiple required></p>
-      <p><textarea name="job_description" placeholder="Job Description" required></textarea></p>
-      <p><input type="text" name="mandatory_keywords" placeholder="Mandatory Keywords" required></p>
-      <p><button type="submit">Submit</button></p>
-      <p><button id="downloadCSV" type="button" style="display: none;">Download CSV</button></p>
-      <div class="loader" id="loadingSpinner"></div>
+        <label for="file[]">Upload Resumes (PDF):</label><br>
+        <input type="file" id="file" name="file[]" multiple><br><br>
+
+        <input type="submit" value="Upload and Evaluate">
     </form>
-    <h2>Results</h2>
-    <table id="resultsTable">
-      <thead>
-        <tr>
-          <th>Resume Name</th>
-          <th>Comments</th>
-          <th>Suitability</th>
-        </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
+
+    <h2>Evaluation Results</h2>
+    <div id="results"></div>
+
     <script>
-      document.getElementById('uploadForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
 
-        document.getElementById('loadingSpinner').style.display = 'inline-block';
+            const response = await fetch("/upload", {
+                method: "POST",
+                body: formData
+            });
 
-        const formData = new FormData(e.target);
-        const response = await fetch('/upload', {
-          method: 'POST',
-          body: formData
-        });
+            const resultData = await response.json();
+            const resultsDiv = document.getElementById("results");
 
-        document.getElementById('loadingSpinner').style.display = 'none';
+            let html = '<table border="1">';
+            html += '<tr><th>Resume Name</th><th>Comments</th><th>Suitability</th></tr>';
 
-        if (response.ok) {
-          const json = await response.json();
-          const table = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            resultData.results.forEach(result => {
+                html += `<tr>
+                            <td>${result[0]}</td>
+                            <td>${result[1]}</td>
+                            <td>${result[2]}</td>
+                         </tr>`;
+            });
 
-          table.innerHTML = '';  // Clear existing table rows
-
-          // Add new table rows with the results
-          json.results.forEach(result => {
-            const newRow = table.insertRow();
-            newRow.insertCell().innerText = result[0];
-            newRow.insertCell().innerText = result[1];
-            newRow.insertCell().innerText = result[2];
-          });
-
-          document.getElementById('downloadCSV').style.display = 'inline';
-        } else {
-          console.error('Failed to fetch results', response);
+            html += '</table>';
+            resultsDiv.innerHTML = html;
         }
-      });
 
-      document.getElementById("downloadCSV").addEventListener("click", function() {
-        window.location.href = "/download_csv?timestamp=" + new Date().getTime();
-      });
+        document.querySelector('form').addEventListener('submit', handleFormSubmit);
     </script>
-  </body>
+</body>
 </html>
